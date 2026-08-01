@@ -1,0 +1,242 @@
+import time
+import random
+import numpy as np
+
+CONDITIONS = [
+    "Normal",
+    "Pneumonia",
+    "COVID-19",
+    "Tuberculosis",
+    "Lung Nodule",
+    "Pneumothorax",
+    "Pleural Effusion",
+    "Cardiomegaly",
+    "Atelectasis",
+    "Edema",
+]
+
+CONFIDENCE_RANGES = {
+    "Normal": (0.85, 0.99),
+    "Pneumonia": (0.75, 0.95),
+    "COVID-19": (0.80, 0.97),
+    "Tuberculosis": (0.70, 0.93),
+    "Lung Nodule": (0.65, 0.90),
+    "Pneumothorax": (0.72, 0.94),
+    "Pleural Effusion": (0.78, 0.96),
+    "Cardiomegaly": (0.82, 0.98),
+    "Atelectasis": (0.68, 0.91),
+    "Edema": (0.74, 0.95),
+}
+
+DISEASE_INFO = {
+    "Normal": {
+        "description": "No significant abnormalities detected in the chest X-ray. The lungs are clear with no signs of infection, inflammation, or structural abnormalities.",
+        "severity": "None",
+        "common_symptoms": [],
+        "treatment": "No treatment required. Regular check-ups recommended.",
+        "risk_factors": [],
+    },
+    "Pneumonia": {
+        "description": "An infection that inflames the air sacs in one or both lungs, which may fill with fluid. Bacterial, viral, or fungal causes.",
+        "severity": "Moderate to High",
+        "common_symptoms": [
+            "Cough with phlegm",
+            "Fever and chills",
+            "Shortness of breath",
+            "Chest pain when breathing",
+        ],
+        "treatment": "Antibiotics for bacterial pneumonia, antiviral medications, fever reducers, and oxygen therapy if needed.",
+        "risk_factors": [
+            "Age > 65",
+            "Smoking",
+            "Chronic diseases",
+            "Weakened immune system",
+        ],
+    },
+    "COVID-19": {
+        "description": "A viral respiratory illness caused by the SARS-CoV-2 virus. Chest X-rays may show bilateral ground-glass opacities and consolidations.",
+        "severity": "Variable (Mild to Critical)",
+        "common_symptoms": [
+            "Fever",
+            "Dry cough",
+            "Fatigue",
+            "Loss of taste/smell",
+            "Difficulty breathing",
+        ],
+        "treatment": "Supportive care, antiviral medications, oxygen therapy, and in severe cases, mechanical ventilation.",
+        "risk_factors": [
+            "Close contact with infected individuals",
+            "Age > 60",
+            "Obesity",
+            "Underlying health conditions",
+        ],
+    },
+    "Tuberculosis": {
+        "description": "A serious bacterial infection that primarily affects the lungs. TB spreads through airborne droplets when an infected person coughs or sneezes.",
+        "severity": "High",
+        "common_symptoms": [
+            "Persistent cough (>3 weeks)",
+            "Coughing blood",
+            "Night sweats",
+            "Weight loss",
+            "Fever",
+        ],
+        "treatment": "Long-term antibiotic regimen (6-9 months), typically involving multiple drugs like rifampin and isoniazid.",
+        "risk_factors": [
+            "Weakened immune system",
+            "Close contact with TB patients",
+            "Living in crowded conditions",
+            "Substance abuse",
+        ],
+    },
+    "Lung Nodule": {
+        "description": "A small, round or oval-shaped growth in the lung that appears as a white spot on chest X-rays. Most are benign but some may be malignant.",
+        "severity": "Variable",
+        "common_symptoms": [
+            "Often asymptomatic",
+            "Persistent cough",
+            "Shortness of breath",
+            "Wheezing",
+            "Unexplained weight loss",
+        ],
+        "treatment": "Monitoring with regular CT scans, biopsy if suspicious, surgical removal if necessary.",
+        "risk_factors": [
+            "Smoking",
+            "Exposure to carcinogens",
+            "Family history of lung cancer",
+            "Radiation therapy",
+        ],
+    },
+    "Pneumothorax": {
+        "description": "A collapsed lung caused by air leaking into the space between the lung and chest wall, compressing the lung.",
+        "severity": "High (Emergency)",
+        "common_symptoms": [
+            "Sudden sharp chest pain",
+            "Shortness of breath",
+            "Rapid heart rate",
+            "Cyanosis (blue skin)",
+        ],
+        "treatment": "Chest tube insertion to remove air, oxygen therapy, and in severe cases, surgery.",
+        "risk_factors": [
+            "Lung disease",
+            "Mechanical ventilation",
+            "Smoking",
+            "Tall and thin body type",
+        ],
+    },
+    "Pleural Effusion": {
+        "description": "Excess fluid buildup between the layers of the pleura outside the lungs, often caused by underlying medical conditions.",
+        "severity": "Moderate to High",
+        "common_symptoms": [
+            "Chest pain",
+            "Shortness of breath",
+            "Persistent cough",
+            "Fever",
+            "Difficulty lying flat",
+        ],
+        "treatment": "Treating the underlying cause, thoracentesis (fluid drainage), and pleurodesis if recurrent.",
+        "risk_factors": [
+            "Heart failure",
+            "Liver cirrhosis",
+            "Kidney disease",
+            "Autoimmune disorders",
+        ],
+    },
+    "Cardiomegaly": {
+        "description": "An enlarged heart, often discovered incidentally on chest X-rays. It's a sign of another condition rather than a disease itself.",
+        "severity": "Moderate",
+        "common_symptoms": [
+            "Shortness of breath",
+            "Swelling in legs/ankles",
+            "Fatigue",
+            "Irregular heartbeat",
+            "Dizziness",
+        ],
+        "treatment": "Addressing underlying causes, medications (ACE inhibitors, beta-blockers, diuretics), and lifestyle changes.",
+        "risk_factors": [
+            "High blood pressure",
+            "Coronary artery disease",
+            "Heart valve disease",
+            "Family history",
+        ],
+    },
+    "Atelectasis": {
+        "description": "Partial or complete collapse of a lung or a section of a lung, reducing gas exchange and oxygen levels.",
+        "severity": "Variable",
+        "common_symptoms": [
+            "Difficulty breathing",
+            "Rapid shallow breathing",
+            "Cough",
+            "Low oxygen saturation",
+        ],
+        "treatment": "Deep breathing exercises, bronchodilators, treating obstruction, and in severe cases, positive pressure ventilation.",
+        "risk_factors": [
+            "Recent surgery (especially chest)",
+            "Prolonged bed rest",
+            "Mucus plug",
+            "Foreign body aspiration",
+        ],
+    },
+    "Edema": {
+        "description": "Pulmonary edema is fluid accumulation in the lung's air spaces, often caused by heart problems or acute lung injury.",
+        "severity": "High (Emergency)",
+        "common_symptoms": [
+            "Severe shortness of breath",
+            "Wheezing or gasping",
+            "Anxiety or restlessness",
+            "Cough with frothy sputum",
+            "Excessive sweating",
+        ],
+        "treatment": "Oxygen therapy, diuretics to remove fluid, treating underlying heart condition, and mechanical ventilation if severe.",
+        "risk_factors": [
+            "Congestive heart failure",
+            "Heart attack",
+            "High altitude",
+            "Lung infection",
+        ],
+    },
+}
+
+
+def predict(image_bytes):
+    time.sleep(1.5)
+
+    logits = {c: random.uniform(0, 1) for c in CONDITIONS}
+    total = sum(logits.values())
+    probs = {c: v / total for c, v in logits.items()}
+
+    sorted_conditions = sorted(probs.items(), key=lambda x: x[1], reverse=True)
+
+    top_condition = sorted_conditions[0][0]
+    lo, hi = CONFIDENCE_RANGES[top_condition]
+    confidence = round(random.uniform(lo, hi), 4)
+
+    all_predictions = []
+    for condition, prob in sorted_conditions:
+        lo, hi = CONFIDENCE_RANGES[condition]
+        conf = round(random.uniform(lo, hi), 4)
+        all_predictions.append(
+            {"condition": condition, "confidence": conf, "probability": round(prob, 4)}
+        )
+
+    return {
+        "prediction": top_condition,
+        "confidence": confidence,
+        "all_predictions": all_predictions,
+        "disease_info": DISEASE_INFO.get(top_condition, {}),
+        "processing_time_ms": round(random.uniform(800, 2500), 2),
+    }
+
+
+def get_all_diseases():
+    return [
+        {
+            "name": name,
+            "description": info["description"],
+            "severity": info["severity"],
+            "common_symptoms": info["common_symptoms"],
+            "treatment": info["treatment"],
+            "risk_factors": info["risk_factors"],
+        }
+        for name, info in DISEASE_INFO.items()
+    ]
